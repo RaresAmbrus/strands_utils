@@ -4,6 +4,7 @@ import sys
 import os
 from sets import Set
 from ftplib import FTP
+import zipfile
 
 def moveFTPFiles(serverName,userName,passWord,remotePath,remoteFolder,localPath, deleteAfterUpload):
 	"""Connect to an FTP server and bring down files to a local directory"""
@@ -74,18 +75,34 @@ def uploadFolder(ftp,remotePath,remoteFolder,localPath,deleteAfterUpload):
 
 	# upload local files to remote folder
  	files_copied = 0
+	archive_name = 'room_data.zip'
+	if (len(filenames) > 0):
+		
+		archive = zipfile.ZipFile(archive_name,mode='w')
+
 	for filename in localFiles:
 		try:
-			print 'Uploading file ', filename, ' to server'
-			ftp.storbinary('STOR ' + filename, open(filename, 'rb'))
+			print 'Adding file ', filename, ' to archive'
+			archive.write(filename)
 			files_copied+= 1			
 		except:	
-			print 'Could not upload file ',filename
+			print 'Could not add file to archive ',filename
 		if deleteAfterUpload:
-			print 'deleting file ', os.path.join(localPath, filename)
+			print 'Deleting file ', os.path.join(localPath, filename)
 			os.remove(os.path.join(localPath, filename))
 
-	print 'Uploaded ',files_copied,' out of ', len(localFiles), ' files from folder ',localPath
+	print 'Archived ',files_copied,' out of ', len(localFiles), ' files from folder ',localPath
+	if (len(filenames) > 0):
+		# upload tar archive to server
+		try:
+			archive.close()
+			print 'Uploading file '+archive_name+' to server'
+			ftp.storbinary('STOR '+archive_name,open(archive_name,'rb'))
+			print 'deleting file ', os.path.join(localPath, archive_name)
+			os.remove(os.path.join(localPath, archive_name))
+		except:
+			print 'Could not upload archive to server'
+
 
 	# recursively upload files from child folders
 	for directory in localDirs:
